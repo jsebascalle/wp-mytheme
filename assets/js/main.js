@@ -1,0 +1,2 @@
+//TABS
+$( "#tabs" ).tabs();

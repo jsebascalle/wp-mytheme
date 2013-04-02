@@ -18,7 +18,7 @@ get_header(); ?>
 
 			<?php if ( have_posts() ) : ?>
 
-				<header class="page-header">
+				<divdiv class="page-header">
 					<h1 class="page-title">
 						<?php
 							if ( is_day() ) :
@@ -32,11 +32,9 @@ get_header(); ?>
 							endif;
 						?>
 					</h1>
-				</header>
+				</div>
 
 				<?php rewind_posts(); ?>
-
-				<?php toolbox_content_nav( 'nav-above' ); ?>
 
 				<?php /* Start the Loop */ ?>
 				<?php while ( have_posts() ) : the_post(); ?>
@@ -51,14 +49,12 @@ get_header(); ?>
 
 				<?php endwhile; ?>
 
-				<?php toolbox_content_nav( 'nav-below' ); ?>
-
 			<?php else : ?>
 
 				<article id="post-0" class="post no-results not-found">
-					<header class="entry-header">
-						<h1 class="entry-title"><?php _e( 'Nothing Found', 'toolbox' ); ?></h1>
-					</header><!-- .entry-header -->
+					<div class="entry-header">
+						<h1 class="entry-title"></h1>
+					</div><!-- .entry-header -->
 
 					<div class="entry-content">
 						<p><?php _e( 'It seems we can&rsquo;t find what you&rsquo;re looking for. Perhaps searching can help.', 'toolbox' ); ?></p>

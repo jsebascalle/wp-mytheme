@@ -1,141 +1,101 @@
 <?php
 /**
- * Toolbox functions and definitions
  *
- * Sets up the theme and provides some helper functions. Some helper functions
- * are used in the theme as custom template tags. Others are attached to action and
- * filter hooks in WordPress to change core functionality.
- *
- * When using a child theme (see http://codex.wordpress.org/Theme_Development and
- * http://codex.wordpress.org/Child_Themes), you can override certain functions
- * (those wrapped in a function_exists() call) by defining them first in your child theme's
- * functions.php file. The child theme's functions.php file is included before the parent
- * theme's file, so the child theme functions would be used.
- *
- * Functions that are not pluggable (not wrapped in function_exists()) are instead attached
- * to a filter or action hook. The hook can be removed by using remove_action() or
- * remove_filter() and you can attach your own function to the hook.
- *
- * For more information on hooks, actions, and filters, see http://codex.wordpress.org/Plugin_API.
- *
- * @package Toolbox
- * @since Toolbox 0.1
+ * @package Mytheme
+ * @since MyTheme 0.1
  */
 
 /**
  * Set the content width based on the theme's design and stylesheet.
  */
 if ( ! isset( $content_width ) )
-	$content_width = 640; /* pixels */
+	$content_width = 640;
 
-if ( ! function_exists( 'toolbox_setup' ) ):
 /**
- * Sets up theme defaults and registers support for various WordPress features.
- *
- * Note that this function is hooked into the after_setup_theme hook, which runs
- * before the init hook. The init hook is too late for some features, such as indicating
- * support post thumbnails.
- *
- * To override toolbox_setup() in a child theme, add your own toolbox_setup to your child theme's
- * functions.php file.
+ * Tell WordPress to run  'after_setup_theme' hook is run.
  */
-function toolbox_setup() {
-	/**
-	 * Add default posts and comments RSS feed links to head
-	 */
+add_action( 'after_setup_theme', 'mytheme_setup' );
+
+if ( ! function_exists( 'newtheme_setup' ) ):
+ 
+function mytheme_setup() {
+ 
+	add_editor_style();
+
 	add_theme_support( 'automatic-feed-links' );
+
+	register_nav_menu( 'primary', __( 'Primary Menu', 'mytheme' ) );
+
+	add_theme_support( 'post-formats', array( 'aside', 'link', 'gallery', 'status', 'quote', 'image' ) );
+
+	add_theme_support( 'post-thumbnails' );
+
+	//set_post_thumbnail_size( $custom_header_support['width'], $custom_header_support['height'], true );
+	//add_image_size( 'large-feature', $custom_header_support['width'], $custom_header_support['height'], true );
+	//add_image_size( 'small-feature', 500, 300 );
 }
-endif; // toolbox_setup
+ endif;
+
+
+	/**
+	 * Sets the post excerpt length to 40 words.
+	 *
+	 * To override this length in a child theme, remove the filter and add your own
+	 * function tied to the excerpt_length filter hook.
+	 */
+	function excerpt_length( $length ) {
+		return 40;
+	}
+	add_filter( 'excerpt_length', 'twentyeleven_excerpt_length' );
+
+	/**
+	 * Returns a "Continue Reading" link for excerpts
+	 */
+	function continue_reading_link() {
+		return ' <a href="'. esc_url( get_permalink() ) . '">' . __( 'Continue reading <span class="meta-nav">&rarr;</span>', 'newtheme' ) . '</a>';
+	}
+
+	/**
+	 * Replaces "[...]" (appended to automatically generated excerpts) with an ellipsis and newtheme_continue_reading_link().
+	 *
+	 * To override this in a child theme, remove the filter and add your own
+	 * function tied to the excerpt_more filter hook.
+	 */
+	function auto_excerpt_more( $more ) {
+		return ' &hellip;' . continue_reading_link();
+	}
+	add_filter( 'excerpt_more', 'newtheme_auto_excerpt_more' );
+
+	/**
+	 * Adds a pretty "Continue Reading" link to custom post excerpts.
+	 *
+	 * To override this link in a child theme, remove the filter and add your own
+	 * function tied to the get_the_excerpt filter hook.
+	 */
+	function custom_excerpt_more( $output ) {
+		if ( has_excerpt() && ! is_attachment() ) {
+			$output .= continue_reading_link();
+		}
+		return $output;
+	}
+	add_filter( 'get_the_excerpt', 'custom_excerpt_more' );
+	/**
+	 * Get our wp_nav_menu() fallback, wp_page_menu(), to show a home link.
+	 */
+	function page_menu_args( $args ) {
+		$args['show_home'] = true;
+		return $args;
+	}
+	add_filter( 'wp_page_menu_args', 'page_menu_args' );
 
 
 
 /**
- * Tell WordPress to run toolbox_setup() when the 'after_setup_theme' hook is run.
+ * Register our sidebars and widgetized areas. Also register the default Epherma widget.
+ *
+ * @since MyTheme 1.0
  */
-add_action( 'after_setup_theme', 'toolbox_setup' );
-
-function theme_register_settings() {
-    register_setting('wpb_theme_options', 'wpb_options', 'wpb_validate_options');
-}
- 
-
-function theme_options() {
-    add_theme_page('WP-Bootstrap Options', 'WP-Bootstrap Options', 'edit_theme_options', 'theme_options', 'theme_options_page');
-}
- 
-add_action('admin_init', 'theme_register_settings');
-add_action('admin_menu', 'theme_options');
-
-function theme_options_page() {
-    global $sa_options, $sa_categories, $sa_layouts;
- 
-    if ( ! isset( $_REQUEST['updated'] ) )
-    $_REQUEST['updated'] = false; // This checks whether the form has just been submitted. ?>
- 
-    <div>
- 
-    <?php screen_icon(); echo "<h2 style='padding-top: 16px;'>" . get_current_theme() . __(' Theme Options') . "</h2>";
-    // This shows the page's name and an icon if one has been provided ?>
- 
-    <?php if ( false !== $_REQUEST['updated'] ) : ?>
-    <div><p><strong><?php _e('Options saved'); ?></strong></p></div>
-    <?php endif; // If the form has just been submitted, this shows the notification ?>
- 
-    <form method="post" action="options.php">
- 
-    <?php 
-	$default_options = array('copytxt' => '&copy; ' . date('Y') . ": " .  get_bloginfo('name'));
-	$settings = get_option('wpb_options', $default_options ); ?>
- 	<br />
-    <?php settings_fields('wpb_theme_options');
-    /* This function outputs some hidden fields required by the form,
-    including a nonce, a unique number used to ensure the form has been submitted from the admin page
-    and not somewhere else, very important for security */ ?>
-    <table> 
-    	<tr valign="top"><th scope="row"><label for="footer_copyright">Footer Copyright</label></th>
-    		<td>
-    			<input id="copytxt" name="wpb_options[copytxt]" type="text" value="<?php  esc_attr_e($settings['copytxt']); ?>" />
-    		</td>
-    	</tr> 
-    	<tr valign="top"><th scope="row"><label for="head_coded">Custom header code</label></th>
-    		<td>
-    			<textarea rows="10" name="wpb_options[headcode]" id="head_coded" style="width: 400px;"><?php  esc_attr_e($settings['headcode']); ?></textarea>
-    			<p>Can be used for code to add in the header - for example, Google Analytics.</p>
-    		</td>
-    	</tr> 
-    </table>
-    <p><input type="submit" value="Save Options" /></p> 
-    </form>
-    </div>
-    <?php
-}
-
-function wpb_validate_options($in) {
-	return $in;
-}
-
-/**
- * Set a default theme color array for WP.com.
- */
-$themecolors = array(
-	'bg' => 'ffffff',
-	'border' => 'eeeeee',
-	'text' => '444444',
-);
-
-/**
- * Get our wp_nav_menu() fallback, wp_page_menu(), to show a home link.
- */
-function toolbox_page_menu_args( $args ) {
-	$args['show_home'] = true;
-	return $args;
-}
-add_filter( 'wp_page_menu_args', 'toolbox_page_menu_args' );
-
-/**
- * Register widgetized area and update sidebar with default widgets
- */
-function toolbox_widgets_init() {
+function widgets_init() {
 	register_sidebar( array(
 		'name' => __( 'Sidebar 1', 'toolbox' ),
 		'id' => 'sidebar-1',
@@ -155,192 +115,230 @@ function toolbox_widgets_init() {
 		'after_title' => '</h1>',
 	) );
 }
-add_action( 'init', 'toolbox_widgets_init' );
+add_action( 'init', 'widgets_init' );
 
-if ( ! function_exists( 'toolbox_content_nav' ) ):
+ 
+if ( ! function_exists( 'content_nav' ) ) :
 /**
  * Display navigation to next/previous pages when applicable
- *
- * @since Toolbox 1.2
  */
-function toolbox_content_nav( $nav_id ) {
+function content_nav( $nav_id ) {
 	global $wp_query;
-
-	?>
-	<nav id="<?php echo $nav_id; ?>">
-	<?php if ( is_single() ) : // navigation links for single posts ?>
-
-		<?php previous_post_link( '<div class="nav-previous">%link</div>', '<span class="meta-nav">' . _x( '&larr;', 'Previous post link', 'toolbox' ) . '</span> %title' ); ?>
-		<?php next_post_link( '<div class="nav-next">%link</div>', '%title <span class="meta-nav">' . _x( '&rarr;', 'Next post link', 'toolbox' ) . '</span>' ); ?>
-
-	<?php elseif ( $wp_query->max_num_pages > 1 && ( is_home() || is_archive() || is_search() ) ) : // navigation links for home, archive, and search pages ?>
-		<ul class="pager">
-		<?php if ( get_next_posts_link() ) : ?>
-		<div class="nav-previous"><?php next_posts_link( __( '<li class="previous">&larr; Older posts</li>', 'toolbox' ) ); ?></div>
-		<?php endif; ?>
-
-		<?php if ( get_previous_posts_link() ) : ?>
-		<div class="nav-next"><?php previous_posts_link( __( '<li class="next">Newer posts &rarr;</li>', 'toolbox' ) ); ?></div>
-		<?php endif; ?>
-		</ul>
-
-	<?php endif; ?>
-
-	</nav><!-- #<?php echo $nav_id; ?> -->
-	<?php
+ 
+	if ( $wp_query->max_num_pages > 1 ) : ?>
+		<nav id="<?php echo $nav_id; ?>">
+			<h3 class="assistive-text"><?php _e( 'Post navigation', 'mytheme' ); ?></h3>
+			<div class="nav-previous"><?php next_posts_link( __( '<span class="meta-nav">&larr;</span> Older posts', 'mytheme' ) ); ?></div>
+			<div class="nav-next"><?php previous_posts_link( __( 'Newer posts <span class="meta-nav">&rarr;</span>', 'mytheme' ) ); ?></div>
+		</nav><!-- #nav-above -->
+	<?php endif;
 }
-endif; // toolbox_content_nav
-
-
-if ( ! function_exists( 'toolbox_comment' ) ) :
-/**
- * Template for comments and pingbacks.
- *
- * To override this walker in a child theme without modifying the comments template
- * simply create your own toolbox_comment(), and that function will be used instead.
- *
- * Used as a callback by wp_list_comments() for displaying the comments.
- *
- * @since Toolbox 0.4
- */
-function toolbox_comment( $comment, $args, $depth ) {
-	$GLOBALS['comment'] = $comment;
-	switch ( $comment->comment_type ) :
-		case 'pingback' :
-		case 'trackback' :
-	?>
-	<li class="post pingback">
-		<p><?php _e( 'Pingback:', 'toolbox' ); ?> <?php comment_author_link(); ?><?php edit_comment_link( __( '(Edit)', 'toolbox' ), ' ' ); ?></p>
-	<?php
-			break;
-		default :
-	?>
-	<li <?php comment_class(); ?> id="li-comment-<?php comment_ID(); ?>">
-		<article id="comment-<?php comment_ID(); ?>" class="comment">
-			<footer>
-				<div class="comment-author vcard">
-					<?php echo get_avatar( $comment, 40 ); ?>
-					<?php printf( __( '%s <span class="says">says:</span>', 'toolbox' ), sprintf( '<cite class="fn">%s</cite>', get_comment_author_link() ) ); ?>
-				</div><!-- .comment-author .vcard -->
-				<?php if ( $comment->comment_approved == '0' ) : ?>
-					<em><?php _e( 'Your comment is awaiting moderation.', 'toolbox' ); ?></em>
-					<br />
-				<?php endif; ?>
-
-				<div class="comment-meta commentmetadata">
-					<a href="<?php echo esc_url( get_comment_link( $comment->comment_ID ) ); ?>"><time pubdate datetime="<?php comment_time( 'c' ); ?>">
-					<?php
-						/* translators: 1: date, 2: time */
-						printf( __( '%1$s at %2$s', 'toolbox' ), get_comment_date(), get_comment_time() ); ?>
-					</time></a>
-					<?php edit_comment_link( __( '(Edit)', 'toolbox' ), ' ' );
-					?>
-				</div><!-- .comment-meta .commentmetadata -->
-			</footer>
-
-			<div class="comment-content"><?php comment_text(); ?></div>
-
-			<div class="reply">
-				<?php comment_reply_link( array_merge( $args, array( 'depth' => $depth, 'max_depth' => $args['max_depth'] ) ) ); ?>
-			</div><!-- .reply -->
-		</article><!-- #comment-## -->
-
-	<?php
-			break;
-	endswitch;
-}
-endif; // ends check for toolbox_comment()
-
-if ( ! function_exists( 'toolbox_posted_on' ) ) :
-/**
- * Prints HTML with meta information for the current post-date/time and author.
- * Create your own toolbox_posted_on to override in a child theme
- *
- * @since Toolbox 1.2
- */
-function toolbox_posted_on() {
-	printf( __( '<span class="sep">Posted on </span><a href="%1$s" title="%2$s" rel="bookmark"><time class="entry-date" datetime="%3$s" pubdate>%4$s</time></a><span class="byline"> <span class="sep"> by </span> <span class="author vcard"><a class="url fn n" href="%5$s" title="%6$s" rel="author">%7$s</a></span></span>', 'toolbox' ),
-		esc_url( get_permalink() ),
-		esc_attr( get_the_time() ),
-		esc_attr( get_the_date( 'c' ) ),
-		esc_html( get_the_date() ),
-		esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) ) ),
-		esc_attr( sprintf( __( 'View all posts by %s', 'toolbox' ), get_the_author() ) ),
-		esc_html( get_the_author() )
-	);
-}
-endif;
+endif; // newtheme_content_nav
 
 /**
- * Adds custom classes to the array of body classes.
+ * Return the URL for the first link found in the post content.
  *
- * @since Toolbox 1.2
+ * @return string|bool URL or false when no link is present.
  */
-function toolbox_body_classes( $classes ) {
-	// Adds a class of single-author to blogs with only 1 published author
-	if ( ! is_multi_author() ) {
+function url_grabber() {
+	if ( ! preg_match( '/<a\s[^>]*?href=[\'"](.+?)[\'"]/is', get_the_content(), $matches ) )
+		return false;
+ 
+	return esc_url_raw( $matches[1] );
+}
+
+/**
+ * Adds two classes to the array of body classes.
+ * The first is if the site has only had one author with published posts.
+ * The second is if a singular post being displayed
+ */
+function body_classes( $classes ) {
+ 
+	if ( function_exists( 'is_multi_author' ) && ! is_multi_author() )
 		$classes[] = 'single-author';
-	}
-
+ 
+	if ( is_singular() && ! is_home() && ! is_page_template( 'showcase.php' ) && ! is_page_template( 'sidebar-page.php' ) )
+		$classes[] = 'singular';
+ 
 	return $classes;
 }
-add_filter( 'body_class', 'toolbox_body_classes' );
+add_filter( 'body_class', 'body_classes' );
+
+/*OTRAS FUNCIONES UTILES*/
 
 /**
- * Returns true if a blog has more than 1 category
- *
- * @since Toolbox 1.2
+ * mostrar las imágenes miniatura en el RSS
  */
-function toolbox_categorized_blog() {
-	if ( false === ( $all_the_cool_cats = get_transient( 'all_the_cool_cats' ) ) ) {
-		// Create an array of all the categories that are attached to posts
-		$all_the_cool_cats = get_categories( array(
-			'hide_empty' => 1,
-		) );
 
-		// Count the number of categories that are attached to the posts
-		$all_the_cool_cats = count( $all_the_cool_cats );
-
-		set_transient( 'all_the_cool_cats', $all_the_cool_cats );
+function rss_post_thumbnail($content) {
+	global $post;
+	if(has_post_thumbnail($post->ID)) {
+	$content = '<p>' . get_the_post_thumbnail($post->ID) .
+	'</p>' . get_the_content();
 	}
+	return $content;
+}
+add_filter('the_excerpt_rss', 'rss_post_thumbnail');
+add_filter('the_content_feed', 'rss_post_thumbnail');
 
-	if ( '1' != $all_the_cool_cats ) {
-		// This blog has more than 1 category so toolbox_categorized_blog should return true
-		return true;
+/**
+ * Puedes añadir tu logo al panel de administración, justo al lado del enlace hacia el blog en la parte superior izquierda, añadiendo el siguiente código al archivo functions.php:
+ */
+//add_action('admin_head', 'logo_admin');
+function logo_admin() {
+	echo '
+	<style type="text/css">
+	#header-logo { background-image: url('.get_bloginfo('template_directory').'/assets/img/custom-logo.gif) !important; }
+	</style>
+	';
+}
+
+/**
+ * Si quieres eliminar los widgets por defecto de WordPress como Enlaces, Archivos, Calendario, etc, solo debes añadir el siguiente código al archivo functions.php:
+ */
+function unregister_default_wp_widgets() {
+	unregister_widget('WP_Widget_Pages');
+	unregister_widget('WP_Widget_Calendar');
+	unregister_widget('WP_Widget_Archives');
+	unregister_widget('WP_Widget_Links');
+	unregister_widget('WP_Widget_Meta');
+	//unregister_widget('WP_Widget_Search');
+	//unregister_widget('WP_Widget_Text');
+	unregister_widget('WP_Widget_Categories');
+	//unregister_widget('WP_Widget_Recent_Posts');
+	unregister_widget('WP_Widget_Recent_Comments');
+	unregister_widget('WP_Widget_RSS');
+	//unregister_widget('WP_Widget_Tag_Cloud');
+}
+add_action('widgets_init', 'unregister_default_wp_widgets', 1);
+
+/**
+ * Desbloquear botones útiles en el editor visual
+ */
+
+function habilitar_mas_botones($buttons) {
+	$buttons[] = 'hr';
+	$buttons[] = 'sub';
+	$buttons[] = 'sup';
+	$buttons[] = 'fontselect';
+	$buttons[] = 'fontsizeselect';
+	$buttons[] = 'cleanup';
+	$buttons[] = 'styleselect';
+	return $buttons;
+}
+add_filter("mce_buttons_3", "habilitar_mas_botones");
+
+/**
+ *  Permitir más etiquetas HTML en el editor HTML de WordPress
+ */
+
+function cambiar_opciones_mce($initArray) {
+	$ext = 'pre[id|name|class|style],iframe[align|longdesc| name|width|height|frameborder|scrolling|marginheight| marginwidth|src]';
+
+	if ( isset( $initArray['extended_valid_elements'] ) ) {
+	$initArray['extended_valid_elements'] .= ',' . $ext;
 	} else {
-		// This blog has only 1 category so toolbox_categorized_blog should return false
-		return false;
+	$initArray['extended_valid_elements'] = $ext;
+	}
+
+	return $initArray;
+}
+add_filter('tiny_mce_before_init', 'cambiar_opciones_mce');
+
+/**
+ * Paginación de artículos sin necesidad de un plugin
+ */
+
+function pagination($prev = '«', $next = '»') {
+	global $wp_query, $wp_rewrite;
+	$wp_query->query_vars['paged'] > 1 ? $current = $wp_query->query_vars['paged'] : $current = 1;
+	$pagination = array(
+	'base' => @add_query_arg('paged','%#%'),
+	'format' => '',
+	'total' => $wp_query->max_num_pages,
+	'current' => $current,
+	'prev_text' => __($prev),
+	'next_text' => __($next), 'type' => 'plain'
+	);
+	if( $wp_rewrite->using_permalinks() )
+	$pagination['base'] = user_trailingslashit( trailingslashit( remove_query_arg( 's', get_pagenum_link( 1 ) ) ) . 'page/%#%/', 'paged' );
+	if( !empty($wp_query->query_vars['s']) )
+	$pagination['add_args'] = array( 's' => get_query_var( 's' ) ); echo paginate_links( $pagination );
+}
+
+/*uso:<div class="pagination"><?php pagination('»', '«');?></div>*/
+
+
+/**
+ * Eliminar contenido de wp_head()
+ */
+
+remove_action('wp_head', 'rsd_link');
+remove_action('wp_head', 'feed_links', 2);
+remove_action('wp_head', 'index_rel_link');
+remove_action('wp_head', 'wlwmanifest_link');
+remove_action('wp_head', 'feed_links_extra', 3);
+remove_action('wp_head', 'start_post_rel_link', 10, 0);
+remove_action('wp_head', 'parent_post_rel_link', 10, 0);
+remove_action('wp_head', 'adjacent_posts_rel_link', 10, 0);
+
+add_filter('the_generator','killVersion');
+function killVersion() { return ''; }
+remove_action('wp_head', 'wp_generator');
+
+
+/**
+ *  Obtener el número de visitas de un artículo sin plugin
+ * 
+ * Loop single.php:    setPostViews(get_the_ID());
+ * 
+ * para ver: echo getPostViews(get_the_ID());
+ * 
+ */
+
+
+function getPostViews($postID){
+	$count_key = 'post_views_count';
+	$count = get_post_meta($postID, $count_key, true);
+	if($count==''){
+	delete_post_meta($postID, $count_key);
+	add_post_meta($postID, $count_key, '0');
+	return "0 View";
+	}
+	return $count.' Views';
+}
+
+
+function setPostViews($postID) {
+	$count_key = 'post_views_count';
+	$count = get_post_meta($postID, $count_key, true);
+	if($count==''){
+	$count = 0;
+	delete_post_meta($postID, $count_key);
+	add_post_meta($postID, $count_key, '0');
+	}else{
+	$count++;
+	update_post_meta($postID, $count_key, $count);
 	}
 }
 
 /**
- * Flush out the transients used in toolbox_categorized_blog
- *
- * @since Toolbox 1.2
+ * Theme Options
  */
-function toolbox_category_transient_flusher() {
-	// Like, beat it. Dig?
-	delete_transient( 'all_the_cool_cats' );
-}
-add_action( 'edit_category', 'toolbox_category_transient_flusher' );
-add_action( 'save_post', 'toolbox_category_transient_flusher' );
+include_once( 'includes/theme-options.php' );
 
 /**
- * Filter in a link to a content ID attribute for the next/previous image links on image attachment pages
+ * Optional: set 'ot_show_pages' filter to false.
+ * This will hide the settings & documentation pages.
  */
-function toolbox_enhanced_image_navigation( $url ) {
-	global $post, $wp_rewrite;
-
-	$id = (int) $post->ID;
-	$object = get_post( $id );
-	if ( wp_attachment_is_image( $post->ID ) && ( $wp_rewrite->using_permalinks() && ( $object->post_parent > 0 ) && ( $object->post_parent != $id ) ) )
-		$url = $url . '#main';
-
-	return $url;
-}
-add_filter( 'attachment_link', 'toolbox_enhanced_image_navigation' );
-
+add_filter( 'ot_show_pages', '__return_false' );
 
 /**
- * This theme was built with PHP, Semantic HTML, CSS, love, and a Toolbox.
+ * Required: set 'ot_theme_mode' filter to true.
  */
+add_filter( 'ot_theme_mode', '__return_true' );
+
+/**
+ * Required: include OptionTree.
+ */
+include_once( 'option-tree/ot-loader.php' );
